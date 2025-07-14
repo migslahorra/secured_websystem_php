@@ -1,53 +1,75 @@
 <?php
+require_once __DIR__ . '/../connection/db_connect.php';
+require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../includes/csrf.php';
+
 session_start();
-require_once '../includes/functions.php';
-require_once '../connection/db_con.php';
 
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $username = sanitize_input($_POST['username']);
-    $email = sanitize_input($_POST['email']);
-    $password = sanitize_input($_POST['password']);
-    $confirm_password = sanitize_input($_POST['confirm_password']);
-    $role = sanitize_input($_POST['role']);
-    $recaptcha_response = $_POST['g-recaptcha-response'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Verify CSRF token
+    if (!verifyCsrfToken($_POST['csrf_token'])) {
+        $_SESSION['error'] = "Invalid CSRF token!";
+        redirect('../pages/register.php');
+    }
 
-    // Validate inputs
-    if (empty($username) || empty($email) || empty($password) || empty($confirm_password) || empty($role)) {
-        $_SESSION['error'] = "All fields are required";
+    // Verify reCAPTCHA
+    if (!verifyRecaptcha($_POST['g-recaptcha-response'])) {
+        $_SESSION['error'] = "Please verify you're not a robot!";
+        redirect('../pages/register.php');
+    }
+
+    $username = trim($_POST['username']);
+    $email = trim($_POST['email']);
+    $password = $_POST['password'];
+    $confirm_password = $_POST['confirm_password'];
+    $role = isset($_POST['role']) ? $_POST['role'] : 'student'; // Get role from form or default to student
+
+    // Define allowed roles for registration (exclude admin for security)
+    $allowedRoles = ['student', 'faculty', 'admin'];
+
+    // Validation
+    if (empty($username) || empty($email) || empty($password)) {
+        $_SESSION['error'] = "All fields are required!";
         redirect('../pages/register.php');
     }
 
     if ($password !== $confirm_password) {
-        $_SESSION['error'] = "Passwords do not match";
+        $_SESSION['error'] = "Passwords do not match!";
         redirect('../pages/register.php');
     }
 
-    if (!verify_recaptcha($recaptcha_response)) {
-        $_SESSION['error'] = "Please complete the reCAPTCHA challenge";
+    if (strlen($password) < 8) {
+        $_SESSION['error'] = "Password must be at least 8 characters long!";
         redirect('../pages/register.php');
     }
 
-    // Check if username or email exists
-    $stmt = $conn->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
-    $stmt->bind_param("ss", $username, $email);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($result->num_rows > 0) {
-        $_SESSION['error'] = "Username or email already exists";
+    // Validate role
+    if (!in_array($role, $allowedRoles)) {
+        $_SESSION['error'] = "Invalid account type selected!";
         redirect('../pages/register.php');
     }
 
-    // Insert new user
-    $hashed_password = password_hash_secure($password);
-    $stmt = $conn->prepare("INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)");
-    $stmt->bind_param("ssss", $username, $email, $hashed_password, $role);
+    try {
+        // Check if username or email already exists
+        $stmt = $pdo->prepare("SELECT id FROM users WHERE username = ? OR email = ?");
+        $stmt->execute([$username, $email]);
+        
+        if ($stmt->fetch()) {
+            $_SESSION['error'] = "Username or email already exists!";
+            redirect('../pages/register.php');
+        }
 
-    if ($stmt->execute()) {
-        $_SESSION['success'] = "Registration successful. Please login.";
+        // Hash password
+        $hashedPassword = hashPassword($password);
+
+        // Insert new user
+        $stmt = $pdo->prepare("INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)");
+        $stmt->execute([$username, $email, $hashedPassword, $role]);
+
+        $_SESSION['success'] = "Registration successful! Please login.";
         redirect('../pages/login.php');
-    } else {
-        $_SESSION['error'] = "Registration failed. Please try again.";
+    } catch (PDOException $e) {
+        $_SESSION['error'] = "Database error: " . $e->getMessage();
         redirect('../pages/register.php');
     }
 }

@@ -1,72 +1,74 @@
 <?php
-// Strict session validation
-session_start();
+require_once __DIR__ . '/../../includes/init.php';
+checkRole(['faculty']);
 
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'faculty') {
-    session_unset();
-    session_destroy();
-    header("Location: ../../pages/login.php?error=unauthorized");
-    exit();
-}
-
-// Security headers
-header("Content-Security-Policy: default-src 'self'");
+$username = $_SESSION['username'];
+$role = $_SESSION['role'];
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Faculty Dashboard | Secure System</title>
+    <title>Faculty Dashboard - Secured Web System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="../../styles/styles.css">
 </head>
 <body>
-    <nav class="navbar">
-        <div class="container">
-            <a href="dashboard.php" class="navbar-brand">Faculty Portal</a>
-            <ul class="navbar-nav">
-                <li class="nav-item"><a href="dashboard.php" class="nav-link">Dashboard</a></li>
-                <li class="nav-item"><a href="courses.php" class="nav-link">My Courses</a></li>
-                <li class="nav-item"><a href="grades.php" class="nav-link">Gradebook</a></li>
-                <li class="nav-item"><a href="../../authentication/logout.php" class="nav-link">Logout</a></li>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <h3>SecureSys</h3>
+                <p class="text-muted small mb-0">Welcome, <?= htmlspecialchars($username) ?></p>
+            </div>
+            <ul class="sidebar-nav">
+                <li><a href="dashboard.php" class="active"><i class="bi bi-speedometer2 me-2"></i> Dashboard</a></li>
+                <li><a href="#"><i class="bi bi-journal-text me-2"></i> Courses</a></li>
+                <li><a href="#"><i class="bi bi-people me-2"></i> Students</a></li>
+                <li><a href="#"><i class="bi bi-gear me-2"></i> Settings</a></li>
+                <li><a href="../../authentication/logout.php"><i class="bi bi-box-arrow-left me-2"></i> Logout</a></li>
             </ul>
-        </div>
-    </nav>
+        </aside>
 
-    <div class="container">
-        <div class="dashboard-header">
-            <h1>Welcome, Professor <?php echo htmlspecialchars($_SESSION['username']); ?></h1>
-            <p>Teaching schedule: Fall 2023</p>
-        </div>
-
-        <div class="dashboard-grid">
-            <div class="dashboard-card">
-                <h3><i class="icon-book"></i> My Courses</h3>
-                <div class="card-content">
-                    <p>Active courses: 3</p>
-                    <p>Students enrolled: 142</p>
-                </div>
-                <a href="courses.php" class="btn">View Courses</a>
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Faculty Dashboard</h1>
+                <div class="text-muted"><?= date('l, F j, Y') ?></div>
             </div>
 
-            <div class="dashboard-card">
-                <h3><i class="icon-assignment"></i> Pending Assignments</h3>
-                <div class="card-content">
-                    <p>To grade: 87</p>
-                    <p>Overdue: 5</p>
+            <!-- Stats Cards -->
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card stats-card bg-primary text-white">
+                        <i class="bi bi-journal-text fs-1"></i>
+                        <div class="value">5</div>
+                        <div class="label">My Courses</div>
+                    </div>
                 </div>
-                <a href="grades.php" class="btn">Grade Assignments</a>
+                <div class="col-md-4">
+                    <div class="card stats-card bg-success text-white">
+                        <i class="bi bi-people fs-1"></i>
+                        <div class="value">142</div>
+                        <div class="label">Total Students</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card stats-card bg-warning text-dark">
+                        <i class="bi bi-exclamation-triangle fs-1"></i>
+                        <div class="value">3</div>
+                        <div class="label">Pending Grades</div>
+                    </div>
+                </div>
             </div>
 
-            <div class="dashboard-card">
-                <h3><i class="icon-announcement"></i> Announcements</h3>
-                <div class="card-content">
-                    <p>New: 2 announcements</p>
-                    <p>Department updates</p>
-                </div>
-                <a href="announcements.php" class="btn">View All</a>
-            </div>
-        </div>
+            <!-- Faculty-specific content here -->
+        </main>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
